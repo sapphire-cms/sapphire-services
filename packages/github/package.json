@@ -1,0 +1,37 @@
+{
+  "name": "@sapphire-cms/github",
+  "private": false,
+  "version": "0.1.7",
+  "type": "module",
+  "description": "Integration of Sapphire CMS with GitHub as persistence and delivery backend.",
+  "main": "dist/firebase.module.js",
+  "exports": {
+    "types": "./dist/github.module.d.ts",
+    "default": "./dist/firebase.module.js"
+  },
+  "author": "Alexei KLENIN",
+  "license": "Apache-2.0",
+  "homepage": "https://sapphire-cms.io/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sapphire-cms/sapphire-services.git",
+    "directory": "packages/github"
+  },
+  "bugs": {
+    "url": "https://github.com/sapphire-cms/sapphire-services/issues"
+  },
+  "dependencies": {
+    "@sapphire-cms/core": "0.1.7",
+    "defectless": "0.1.7"
+  },
+  "devDependencies": {
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "clean": "rimraf dist",
+    "link": "npm link && npm link defectless @sapphire-cms/core",
+    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "test": "vitest run"
+  }
+}
