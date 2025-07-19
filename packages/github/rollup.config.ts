@@ -1,5 +1,6 @@
 import * as rollup from 'rollup';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
 
 const config: rollup.RollupOptions[] = [
   {
@@ -16,8 +17,15 @@ const config: rollup.RollupOptions[] = [
         tsconfig: './tsconfig.json',
         experimentalDecorators: true,
       }),
+      json(),
     ],
-    external: [],
+    external: [
+      'defectless',
+      '@sapphire-cms/core',
+      'js-base64',
+      '@octokit/rest',
+      '@octokit/request-error',
+    ],
   },
 ];
 

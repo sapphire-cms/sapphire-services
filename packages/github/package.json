@@ -21,10 +21,10 @@
     "url": "https://github.com/sapphire-cms/sapphire-services/issues"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.0",
     "@sapphire-cms/core": "0.1.7",
-    "defectless": "0.1.7"
-  },
-  "devDependencies": {
+    "defectless": "0.1.7",
+    "js-base64": "^3.7.7"
   },
   "scripts": {
     "build": "rollup -c",
