@@ -50,24 +50,30 @@ export class GithubClient {
     return program(function* (): Program<void, RequestError> {
       const contentItemOption: Option<GitHubContentItem> = yield this.getFileContent(branch, path);
 
+      let existingContent: string | undefined;
       let sha: string | undefined;
       if (Option.isSome(contentItemOption)) {
+        existingContent = (contentItemOption.value.content || '').replace(/\s+/g, '');
         sha = contentItemOption.value.sha;
       }
 
-      return Outcome.fromSupplier(
-        () =>
-          this.octokit.repos.createOrUpdateFileContents({
-            owner: this.workPaths.owner,
-            repo: this.workPaths.repo,
-            branch,
-            path,
-            message: message || defaultMessage,
-            content: contentBase64,
-            sha,
-          }),
-        (err) => err as RequestError,
-      ).map(() => {});
+      if (existingContent != contentBase64) {
+        return Outcome.fromSupplier(
+          () =>
+            this.octokit.repos.createOrUpdateFileContents({
+              owner: this.workPaths.owner,
+              repo: this.workPaths.repo,
+              branch,
+              path,
+              message: message || defaultMessage,
+              content: contentBase64,
+              sha,
+            }),
+          (err) => err as RequestError,
+        ).map(() => {});
+      } else {
+        console.info(`Content for the file ${path} is identical to already present. Skip write.`);
+      }
     }, this);
   }
 
