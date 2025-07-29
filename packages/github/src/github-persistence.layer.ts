@@ -365,6 +365,7 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
       RequestError | DecodingError | JsonParsingError
     > {
       const contentItemOption: Option<GitHubContentItem> = yield this.githubClient.deleteFile(
+        this.workPaths.dataBranch,
         filename,
         message,
       );

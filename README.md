@@ -3,7 +3,7 @@
     <p><code>SAPPHIRE SERVICES</code></p>
 </div>
 
-[![npm](https://img.shields.io/npm/v/@sapphire-services/github.svg)](http://npm.im/@sapphire-services/github)
+[![npm](https://img.shields.io/npm/v/@sapphire-cms/github.svg)](http://npm.im/@sapphire-cms/github)
 [![CI](https://github.com/sapphire-cms/sapphire-services/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/sapphire-cms/sapphire-services/actions/workflows/ci.yml)
 
 # Sapphire Services
