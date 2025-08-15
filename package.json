@@ -1,7 +1,7 @@
 {
   "name": "sapphire-services",
   "private": false,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Integrations of Sapphire CMS with 3rd-party services.",
   "author": "Alexei KLENIN",
   "license": "Apache-2.0",
