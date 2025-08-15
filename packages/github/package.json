@@ -3,6 +3,9 @@
   "private": false,
   "version": "0.1.7",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Integration of Sapphire CMS with GitHub as persistence and delivery backend.",
   "main": "dist/firebase.module.js",
   "exports": {
