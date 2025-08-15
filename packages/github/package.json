@@ -25,8 +25,8 @@
   },
   "dependencies": {
     "@octokit/rest": "^22.0.0",
-    "@sapphire-cms/core": "0.1.7",
-    "defectless": "0.1.7",
+    "@sapphire-cms/core": "0.2.0",
+    "defectless": "0.2.0",
     "js-base64": "^3.7.7"
   },
   "scripts": {
