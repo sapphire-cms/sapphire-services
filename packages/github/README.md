@@ -30,7 +30,8 @@ scms pkg i github
 
 config:
   modules:
-    github:
+    module: github
+    config:
       owner: sapphire-cms
       repo: sapphire-cms.io
       data-branch: master

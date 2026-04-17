@@ -9,7 +9,29 @@ import { WorkPaths } from './param-utils';
 type GetContentResponse = Endpoints['GET /repos/{owner}/{repo}/contents/{path}']['response'];
 export type GitHubContentItem = Extract<GetContentResponse['data'], Array<unknown>>[number];
 
+type GetReferenceResponse = Endpoints['GET /repos/{owner}/{repo}/git/ref/{ref}']['response'];
+type UpdateReferenceResponse = Endpoints['PATCH /repos/{owner}/{repo}/git/refs/{ref}']['response'];
+type GetCommitResponse =
+  Endpoints['GET /repos/{owner}/{repo}/git/commits/{commit_sha}']['response'];
+type CreateTreeResponse = Endpoints['POST /repos/{owner}/{repo}/git/trees']['response'];
+type CreateBlobResponse = Endpoints['POST /repos/{owner}/{repo}/git/blobs']['response'];
+type CreateCommitResponse = Endpoints['POST /repos/{owner}/{repo}/git/commits']['response'];
+
+type TreeNode = {
+  path?: string | undefined;
+  mode?: '100644' | '100755' | '040000' | '160000' | '120000' | undefined;
+  type?: 'tree' | 'blob' | 'commit' | undefined;
+  sha?: string | null | undefined;
+  content?: string | undefined;
+};
+
 const defaultMessage = 'Edited with Sapphire CMS';
+
+export interface CommitEntry {
+  contentFile: string;
+  path: string;
+  contentBase64: string;
+}
 
 export class GithubClient {
   private readonly octokit: Octokit;
@@ -45,7 +67,7 @@ export class GithubClient {
     branch: string,
     path: string,
     contentBase64: string,
-    message?: string,
+    message: string = defaultMessage,
   ): Outcome<void, RequestError> {
     return program(function* (): Program<void, RequestError> {
       const contentItemOption: Option<GitHubContentItem> = yield this.getFileContent(branch, path);
@@ -65,7 +87,7 @@ export class GithubClient {
               repo: this.workPaths.repo,
               branch,
               path,
-              message: message || defaultMessage,
+              message,
               content: contentBase64,
               sha,
             }),
@@ -77,10 +99,50 @@ export class GithubClient {
     }, this);
   }
 
+  public saveMany(
+    branch: string,
+    entries: CommitEntry[],
+    message: string = defaultMessage,
+  ): Outcome<void, RequestError> {
+    return program(function* (): Program<void, RequestError> {
+      const branchHeadRef: GetReferenceResponse = yield this.getBranchHeadReference(branch);
+      const headCommit: GetCommitResponse = yield this.getCommit(branchHeadRef.data.object.sha);
+
+      const createBlobTasks: Outcome<CreateBlobResponse, RequestError>[] = entries.map((entry) =>
+        this.createBlob(entry.contentBase64),
+      );
+      const blobResponses: CreateBlobResponse[] = yield Outcome.all(createBlobTasks).mapFailure(
+        (errors) => errors.filter((err) => !!err)[0],
+      );
+
+      const treeNodes: TreeNode[] = entries.map((entry, index) => {
+        return {
+          path: entry.path,
+          mode: '100644',
+          type: 'blob',
+          sha: blobResponses[index].data.sha,
+        };
+      });
+
+      const newTree: CreateTreeResponse = yield this.createTree(
+        headCommit.data.tree.sha,
+        treeNodes,
+      );
+
+      const newCommit: CreateCommitResponse = yield this.createCommit(
+        branchHeadRef.data.object.sha,
+        newTree.data.sha,
+        message,
+      );
+
+      return this.updateBranchHeadReference(branch, newCommit.data.sha).map(() => {});
+    }, this);
+  }
+
   public deleteFile(
     branch: string,
     path: string,
-    message?: string,
+    message: string = defaultMessage,
   ): Outcome<Option<GitHubContentItem>, RequestError> {
     return program(function* (): Program<Option<GitHubContentItem>, RequestError> {
       const contentItemOption: Option<GitHubContentItem> = yield this.getFileContent(branch, path);
@@ -99,7 +161,7 @@ export class GithubClient {
             repo: this.workPaths.repo,
             branch,
             path,
-            message: message || defaultMessage,
+            message,
             sha,
           }),
         (err) => err as RequestError,
@@ -145,6 +207,94 @@ export class GithubClient {
           repo: this.workPaths.repo,
           ref: branch,
           path,
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private getBranchHeadReference(branch: string): Outcome<GetReferenceResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.getRef({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          ref: `heads/${branch}`,
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private updateBranchHeadReference(
+    branch: string,
+    newCommitSha: string,
+  ): Outcome<UpdateReferenceResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.updateRef({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          ref: `heads/${branch}`,
+          sha: newCommitSha,
+          force: false,
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private getCommit(commitSha: string): Outcome<GetCommitResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.getCommit({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          commit_sha: commitSha,
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private createTree(
+    baseTreeSha: string,
+    treeNodes: TreeNode[],
+  ): Outcome<CreateTreeResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.createTree({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          base_tree: baseTreeSha,
+          tree: treeNodes,
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private createBlob(contentBase64: string): Outcome<CreateBlobResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.createBlob({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          content: contentBase64,
+          encoding: 'base64',
+        }),
+      (err) => err as RequestError,
+    );
+  }
+
+  private createCommit(
+    branchHeadSha: string,
+    newTreeSha: string,
+    message: string,
+  ): Outcome<CreateCommitResponse, RequestError> {
+    return Outcome.fromSupplier(
+      () =>
+        this.octokit.rest.git.createCommit({
+          owner: this.workPaths.owner,
+          repo: this.workPaths.repo,
+          message,
+          tree: newTreeSha,
+          parents: [branchHeadSha],
         }),
       (err) => err as RequestError,
     );

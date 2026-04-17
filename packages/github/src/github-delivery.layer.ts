@@ -1,7 +1,7 @@
 import { Artifact, DeliveredArtifact, DeliveryError, DeliveryLayer } from '@sapphire-cms/core';
 import { Outcome } from 'defectless';
 import { Base64 } from 'js-base64';
-import { GithubClient } from './github-client';
+import { CommitEntry, GithubClient } from './github-client';
 import { GithubModuleParams } from './github.module';
 import { resolveWorkPaths, WorkPaths } from './param-utils';
 
@@ -14,7 +14,31 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
     this.githubClient = new GithubClient(this.workPaths);
   }
 
-  public deliverArtefact(artifact: Artifact): Outcome<DeliveredArtifact, DeliveryError> {
+  public deliverArtefacts(artifacts: Artifact[]): Outcome<DeliveredArtifact[], DeliveryError> {
+    const entries = artifacts.map((artifact) => this.toCommitEntry(artifact));
+    const message =
+      'Sapphire CMS: delivering rendered artifacts on GitHub:\n' +
+      entries.map((entry) => ` - ${entry.path}`).join('\n');
+
+    return this.githubClient
+      .saveMany(this.workPaths.outputBranch, entries, message)
+      .map(() =>
+        artifacts.map((artifact, index) =>
+          Object.assign(
+            {
+              resourcePath: entries[index].contentFile,
+            },
+            artifact,
+          ),
+        ),
+      )
+      .mapFailure(
+        (requestError) =>
+          new DeliveryError('Failed to deliver some artifacts to GitHub repo', requestError),
+      );
+  }
+
+  private toCommitEntry(artifact: Artifact): CommitEntry {
     let contentFile: string;
 
     switch (artifact.mime) {
@@ -40,27 +64,9 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
         contentFile = `${artifact.slug}.bin`;
     }
 
-    const filename = this.workPaths.outputDir + '/' + contentFile;
-    const content = Base64.fromUint8Array(artifact.content);
+    const path = this.workPaths.outputDir + '/' + contentFile;
+    const contentBase64 = Base64.fromUint8Array(artifact.content);
 
-    return this.githubClient
-      .saveContent(
-        this.workPaths.outputBranch,
-        filename,
-        content,
-        `Sapphire CMS: delivering rendered artifact ${filename}`,
-      )
-      .map(() =>
-        Object.assign(
-          {
-            resourcePath: contentFile,
-          },
-          artifact,
-        ),
-      )
-      .mapFailure(
-        (requestError) =>
-          new DeliveryError('Failed to save content map into GitHub repo', requestError),
-      );
+    return { contentFile, path, contentBase64 };
   }
 }
