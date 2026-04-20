@@ -30,15 +30,15 @@ scms pkg i github
 
 config:
   modules:
-    module: github
-    config:
-      owner: sapphire-cms
-      repo: sapphire-cms.io
-      data-branch: master
-      data-dir: sapphire-cms-data
-      output-branch: master
-      output-dir: src/app/generated/cms
-      personal-access-token: ${env.GITHUB_PERSONAL_ACCESS_TOKEN}
+    - module: github
+      config:
+        owner: sapphire-cms
+        repo: sapphire-cms.io
+        data-branch: master
+        data-dir: sapphire-cms-data
+        output-branch: master
+        output-dir: src/app/generated/cms
+        personal-access-token: ${env.GITHUB_PERSONAL_ACCESS_TOKEN}
 
 layers:
   persistence: '@github'
