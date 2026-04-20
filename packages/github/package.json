@@ -27,7 +27,8 @@
     "@octokit/rest": "^22.0.0",
     "@sapphire-cms/core": "0.2.1",
     "defectless": "^1.0.0",
-    "js-base64": "^3.7.7"
+    "js-base64": "^3.7.7",
+    "uuid": "^14.0.0"
   },
   "scripts": {
     "build": "rollup -c",

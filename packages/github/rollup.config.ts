@@ -23,6 +23,7 @@ const config: rollup.RollupOptions[] = [
       'defectless',
       '@sapphire-cms/core',
       'js-base64',
+      'uuid',
       '@octokit/rest',
       '@octokit/request-error',
     ],

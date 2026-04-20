@@ -26,7 +26,7 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
         artifacts.map((artifact, index) =>
           Object.assign(
             {
-              resourcePath: entries[index].contentFile,
+              resourcePath: entries[index].contentFile!,
             },
             artifact,
           ),

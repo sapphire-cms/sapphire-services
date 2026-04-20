@@ -28,9 +28,9 @@ type TreeNode = {
 const defaultMessage = 'Edited with Sapphire CMS';
 
 export interface CommitEntry {
-  contentFile: string;
+  contentFile?: string; // undefined, if the commit entry is not a delivered artifact
   path: string;
-  contentBase64: string;
+  contentBase64: string | null; // null means that content should be deleted
 }
 
 export class GithubClient {
@@ -105,24 +105,30 @@ export class GithubClient {
     message: string = defaultMessage,
   ): Outcome<void, RequestError> {
     return program(function* (): Program<void, RequestError> {
-      const branchHeadRef: GetReferenceResponse = yield this.getBranchHeadReference(branch);
-      const headCommit: GetCommitResponse = yield this.getCommit(branchHeadRef.data.object.sha);
+      const treeNodes: TreeNode[] = [];
 
-      const createBlobTasks: Outcome<CreateBlobResponse, RequestError>[] = entries.map((entry) =>
-        this.createBlob(entry.contentBase64),
-      );
-      const blobResponses: CreateBlobResponse[] = yield Outcome.all(createBlobTasks).mapFailure(
-        (errors) => errors.filter((err) => !!err)[0],
-      );
+      for (const entry of entries) {
+        let sha: string | null = null;
 
-      const treeNodes: TreeNode[] = entries.map((entry, index) => {
-        return {
+        if (entry.contentBase64) {
+          // It is put operation
+          const blob: CreateBlobResponse = yield this.createBlob(entry.contentBase64);
+          sha = blob.data.sha;
+        } else {
+          // It is delete operation
+          // Keep sha = null
+        }
+
+        treeNodes.push({
           path: entry.path,
           mode: '100644',
           type: 'blob',
-          sha: blobResponses[index].data.sha,
-        };
-      });
+          sha,
+        });
+      }
+
+      const branchHeadRef: GetReferenceResponse = yield this.getBranchHeadReference(branch);
+      const headCommit: GetCommitResponse = yield this.getCommit(branchHeadRef.data.object.sha);
 
       const newTree: CreateTreeResponse = yield this.createTree(
         headCommit.data.tree.sha,
