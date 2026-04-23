@@ -21,7 +21,7 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
       entries.map((entry) => ` - ${entry.path}`).join('\n');
 
     return this.githubClient
-      .saveDocuments(this.workPaths.outputBranch, entries, message)
+      .saveArtifacts(this.workPaths.outputBranch, entries, message)
       .map(() =>
         artifacts.map((artifact, index) =>
           Object.assign(
