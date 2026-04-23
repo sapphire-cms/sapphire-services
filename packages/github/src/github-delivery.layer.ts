@@ -1,7 +1,7 @@
 import { Artifact, DeliveredArtifact, DeliveryError, DeliveryLayer } from '@sapphire-cms/core';
 import { Outcome } from 'defectless';
 import { Base64 } from 'js-base64';
-import { CommitEntry, GithubClient } from './github-client';
+import { ArtifactEntry, GithubClient } from './github-client';
 import { GithubModuleParams } from './github.module';
 import { resolveWorkPaths, WorkPaths } from './param-utils';
 
@@ -21,7 +21,7 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
       entries.map((entry) => ` - ${entry.path}`).join('\n');
 
     return this.githubClient
-      .saveMany(this.workPaths.outputBranch, entries, message)
+      .saveDocuments(this.workPaths.outputBranch, entries, message)
       .map(() =>
         artifacts.map((artifact, index) =>
           Object.assign(
@@ -38,7 +38,7 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
       );
   }
 
-  private toCommitEntry(artifact: Artifact): CommitEntry {
+  private toCommitEntry(artifact: Artifact): ArtifactEntry {
     let contentFile: string;
 
     switch (artifact.mime) {

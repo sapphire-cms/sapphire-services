@@ -13,7 +13,7 @@ import { Outcome, program, Program, success } from 'defectless';
 import { Base64 } from 'js-base64';
 import { v4 as uuidv4 } from 'uuid';
 import * as packageJson from '../package.json';
-import { CommitEntry, GithubClient, GitHubContentItem } from './github-client';
+import { DocumentEntry, GithubClient, GitHubContentItem } from './github-client';
 import { GithubModuleParams } from './github.module';
 import { decodeBase64, DecodingError, JsonParsingError, parseJson } from './misc-utils';
 import { resolveWorkPaths, WorkPaths } from './param-utils';
@@ -21,7 +21,7 @@ import { resolveWorkPaths, WorkPaths } from './param-utils';
 export default class GithubPersistenceLayer implements PersistenceLayer<GithubModuleParams> {
   private readonly workPaths: WorkPaths;
   private readonly githubClient: GithubClient;
-  private readonly transactions = new Map<string, CommitEntry[]>();
+  private readonly transactions = new Map<string, DocumentEntry[]>();
 
   constructor(params: GithubModuleParams) {
     this.workPaths = resolveWorkPaths(params);
@@ -178,12 +178,10 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
 
     const message =
       'Sapphire CMS: persisting documents on GitHub:\n' +
-      transaction
-        .map((entry) => ` - [${entry.contentBase64 ? 'M' : 'D'}] ${entry.path}`)
-        .join('\n');
+      transaction.map((entry) => ` - [${entry.content ? 'M' : 'D'}] ${entry.path}`).join('\n');
 
     return this.githubClient
-      .saveMany(this.workPaths.outputBranch, transaction, message)
+      .saveDocuments(this.workPaths.outputBranch, transaction, message)
       .mapFailure(
         (requestError) =>
           new PersistenceError('Failed to save some documents into GitHub repo', requestError),
@@ -204,7 +202,7 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     contentMap: ContentMap,
     transactionId?: string,
   ): Outcome<void, PersistenceError> {
-    const contentBase64 = Base64.encode(JSON.stringify(contentMap));
+    const content = JSON.stringify(contentMap);
 
     if (transactionId) {
       const transaction = this.transactions.get(transactionId);
@@ -215,7 +213,7 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
 
       transaction.push({
         path: this.workPaths.contentMapFile,
-        contentBase64,
+        content,
       });
 
       return Outcome.success();
@@ -225,7 +223,7 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
       .saveContent(
         this.workPaths.dataBranch,
         this.workPaths.contentMapFile,
-        contentBase64,
+        Base64.encode(content),
         'Sapphire CMS: changing content map',
       )
       .mapFailure(
@@ -241,38 +239,8 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Document, PersistenceError> {
     const filename = this.singletonFilename(documentId, variant);
-    document.createdBy = `github@${packageJson.version}`;
-    const content = Base64.encode(JSON.stringify(document));
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: content,
-      });
-
-      return Outcome.success(document);
-    }
-
     const docRef = new DocumentReference(documentId, [], undefined, variant);
-
-    return this.githubClient
-      .saveContent(
-        this.workPaths.dataBranch,
-        filename,
-        content,
-        `Sapphire CMS: changing document ${docRef.toString()}`,
-      )
-      .map(() => document)
-      .mapFailure(
-        (requestError) =>
-          new PersistenceError('Failed to save document into GitHub repo', requestError),
-      );
+    return this.putDocument(filename, docRef, document, transactionId);
   }
 
   public putToCollection(
@@ -283,38 +251,8 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Document, PersistenceError> {
     const filename = this.collectionElemFilename(collectionName, documentId, variant);
-    document.createdBy = `github@${packageJson.version}`;
-    const content = Base64.encode(JSON.stringify(document));
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: content,
-      });
-
-      return Outcome.success(document);
-    }
-
     const docRef = new DocumentReference(collectionName, [], documentId, variant);
-
-    return this.githubClient
-      .saveContent(
-        this.workPaths.dataBranch,
-        filename,
-        content,
-        `Sapphire CMS: changing document ${docRef.toString()}`,
-      )
-      .map(() => document)
-      .mapFailure(
-        (requestError) =>
-          new PersistenceError('Failed to save document into GitHub repo', requestError),
-      );
+    return this.putDocument(filename, docRef, document, transactionId);
   }
 
   public putToTree(
@@ -326,38 +264,8 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Document, PersistenceError> {
     const filename = this.treeLeafFilename(treeName, treePath, documentId, variant);
-    document.createdBy = `github@${packageJson.version}`;
-    const content = Base64.encode(JSON.stringify(document));
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: content,
-      });
-
-      return Outcome.success(document);
-    }
-
     const docRef = new DocumentReference(treeName, treePath, documentId, variant);
-
-    return this.githubClient
-      .saveContent(
-        this.workPaths.dataBranch,
-        filename,
-        content,
-        `Sapphire CMS: changing document ${docRef.toString()}`,
-      )
-      .map(() => document)
-      .mapFailure(
-        (requestError) =>
-          new PersistenceError('Failed to save document into GitHub repo', requestError),
-      );
+    return this.putDocument(filename, docRef, document, transactionId);
   }
 
   public deleteSingleton(
@@ -366,24 +274,12 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Option<Document>, PersistenceError> {
     const filename = this.singletonFilename(documentId, variant);
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: null,
-      });
-
-      return Outcome.success(Option.none());
-    }
-
     const docRef = new DocumentReference(documentId, [], undefined, variant);
-    return this.deleteDocument(filename, `Sapphire CMS: deleting document ${docRef.toString()}`);
+    return this.deleteDocument(
+      filename,
+      `Sapphire CMS: deleting document ${docRef.toString()}`,
+      transactionId,
+    );
   }
 
   public deleteFromCollection(
@@ -393,24 +289,12 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Option<Document>, PersistenceError> {
     const filename = this.collectionElemFilename(collectionName, documentId, variant);
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: null,
-      });
-
-      return Outcome.success(Option.none());
-    }
-
     const docRef = new DocumentReference(collectionName, [], documentId, variant);
-    return this.deleteDocument(filename, `Sapphire CMS: deleting document ${docRef.toString()}`);
+    return this.deleteDocument(
+      filename,
+      `Sapphire CMS: deleting document ${docRef.toString()}`,
+      transactionId,
+    );
   }
 
   public deleteFromTree(
@@ -421,24 +305,12 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     transactionId?: string,
   ): Outcome<Option<Document>, PersistenceError> {
     const filename = this.treeLeafFilename(treeName, treePath, documentId, variant);
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: filename,
-        contentBase64: null,
-      });
-
-      return Outcome.success(Option.none());
-    }
-
     const docRef = new DocumentReference(treeName, treePath, documentId, variant);
-    return this.deleteDocument(filename, `Sapphire CMS: deleting document ${docRef.toString()}`);
+    return this.deleteDocument(
+      filename,
+      `Sapphire CMS: deleting document ${docRef.toString()}`,
+      transactionId,
+    );
   }
 
   private singletonFilename(documentId: string, variant: string): string {
@@ -513,10 +385,64 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     }, this);
   }
 
+  private putDocument(
+    filename: string,
+    docRef: DocumentReference,
+    document: Document,
+    transactionId?: string,
+  ): Outcome<Document, PersistenceError> {
+    document.createdBy = `github@${packageJson.version}`;
+    const content = JSON.stringify(document);
+
+    if (transactionId) {
+      const transaction = this.transactions.get(transactionId);
+
+      if (!transaction) {
+        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
+      }
+
+      transaction.push({
+        path: filename,
+        content,
+      });
+
+      return Outcome.success(document);
+    }
+
+    return this.githubClient
+      .saveContent(
+        this.workPaths.dataBranch,
+        filename,
+        Base64.encode(content),
+        `Sapphire CMS: persisting document ${docRef.toString()}`,
+      )
+      .map(() => document)
+      .mapFailure(
+        (requestError) =>
+          new PersistenceError('Failed to save document into GitHub repo', requestError),
+      );
+  }
+
   private deleteDocument(
     filename: string,
     message: string,
+    transactionId?: string,
   ): Outcome<Option<Document>, PersistenceError> {
+    if (transactionId) {
+      const transaction = this.transactions.get(transactionId);
+
+      if (!transaction) {
+        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
+      }
+
+      transaction.push({
+        path: filename,
+        content: null,
+      });
+
+      return Outcome.success(Option.none());
+    }
+
     return program(function* (): Program<
       Option<Document>,
       RequestError | DecodingError | JsonParsingError

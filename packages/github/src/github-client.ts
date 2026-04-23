@@ -27,10 +27,17 @@ type TreeNode = {
 
 const defaultMessage = 'Edited with Sapphire CMS';
 
-export interface CommitEntry {
-  contentFile?: string; // undefined, if the commit entry is not a delivered artifact
+interface CommitEntry {
   path: string;
-  contentBase64: string | null; // null means that content should be deleted
+}
+
+export interface DocumentEntry extends CommitEntry {
+  content?: string | null; // null means that content should be deleted
+}
+
+export interface ArtifactEntry extends CommitEntry {
+  contentFile: string;
+  contentBase64: string;
 }
 
 export class GithubClient {
@@ -99,49 +106,56 @@ export class GithubClient {
     }, this);
   }
 
-  public saveMany(
+  public saveDocuments(
     branch: string,
-    entries: CommitEntry[],
+    entries: DocumentEntry[],
+    message: string = defaultMessage,
+  ): Outcome<void, RequestError> {
+    const treeNodes: TreeNode[] = [];
+
+    for (const entry of entries) {
+      if (entry.content) {
+        // It is put operation
+        treeNodes.push({
+          path: entry.path,
+          mode: '100644',
+          type: 'blob',
+          content: entry.content,
+        });
+      } else {
+        // It is delete operation
+        treeNodes.push({
+          path: entry.path,
+          mode: '100644',
+          type: 'blob',
+          sha: null,
+        });
+      }
+    }
+
+    return this.commitTree(branch, treeNodes, message);
+  }
+
+  public saveArtifacts(
+    branch: string,
+    entries: ArtifactEntry[],
     message: string = defaultMessage,
   ): Outcome<void, RequestError> {
     return program(function* (): Program<void, RequestError> {
       const treeNodes: TreeNode[] = [];
 
       for (const entry of entries) {
-        let sha: string | null = null;
-
-        if (entry.contentBase64) {
-          // It is put operation
-          const blob: CreateBlobResponse = yield this.createBlob(entry.contentBase64);
-          sha = blob.data.sha;
-        } else {
-          // It is delete operation
-          // Keep sha = null
-        }
+        const blob: CreateBlobResponse = yield this.createBlob(entry.contentBase64);
 
         treeNodes.push({
           path: entry.path,
           mode: '100644',
           type: 'blob',
-          sha,
+          sha: blob.data.sha,
         });
       }
 
-      const branchHeadRef: GetReferenceResponse = yield this.getBranchHeadReference(branch);
-      const headCommit: GetCommitResponse = yield this.getCommit(branchHeadRef.data.object.sha);
-
-      const newTree: CreateTreeResponse = yield this.createTree(
-        headCommit.data.tree.sha,
-        treeNodes,
-      );
-
-      const newCommit: CreateCommitResponse = yield this.createCommit(
-        branchHeadRef.data.object.sha,
-        newTree.data.sha,
-        message,
-      );
-
-      return this.updateBranchHeadReference(branch, newCommit.data.sha).map(() => {});
+      return this.commitTree(branch, treeNodes, message);
     }, this);
   }
 
@@ -203,6 +217,30 @@ export class GithubClient {
           return failure(requestError);
         }
       });
+  }
+
+  private commitTree(
+    branch: string,
+    treeNodes: TreeNode[],
+    message: string,
+  ): Outcome<void, RequestError> {
+    return program(function* (): Program<void, RequestError> {
+      const branchHeadRef: GetReferenceResponse = yield this.getBranchHeadReference(branch);
+      const headCommit: GetCommitResponse = yield this.getCommit(branchHeadRef.data.object.sha);
+
+      const newTree: CreateTreeResponse = yield this.createTree(
+        headCommit.data.tree.sha,
+        treeNodes,
+      );
+
+      const newCommit: CreateCommitResponse = yield this.createCommit(
+        branchHeadRef.data.object.sha,
+        newTree.data.sha,
+        message,
+      );
+
+      return this.updateBranchHeadReference(branch, newCommit.data.sha).map(() => {});
+    }, this);
   }
 
   private getContent(branch: string, path: string): Outcome<GetContentResponse, RequestError> {
