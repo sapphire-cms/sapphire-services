@@ -113,6 +113,10 @@ export class GithubClient {
   ): Outcome<void, RequestError> {
     const treeNodes: TreeNode[] = [];
 
+    if (!entries.length) {
+      return Outcome.success();
+    }
+
     for (const entry of entries) {
       if (entry.content) {
         // It is put operation
@@ -141,6 +145,10 @@ export class GithubClient {
     entries: ArtifactEntry[],
     message: string = defaultMessage,
   ): Outcome<void, RequestError> {
+    if (!entries.length) {
+      return Outcome.success();
+    }
+
     return program(function* (): Program<void, RequestError> {
       const treeNodes: TreeNode[] = [];
 
@@ -232,6 +240,10 @@ export class GithubClient {
         headCommit.data.tree.sha,
         treeNodes,
       );
+
+      if (newTree.data.sha === headCommit.data.tree.sha) {
+        return Outcome.success();
+      }
 
       const newCommit: CreateCommitResponse = yield this.createCommit(
         branchHeadRef.data.object.sha,
