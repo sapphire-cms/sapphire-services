@@ -1,5 +1,6 @@
 import { RequestError } from '@octokit/request-error';
 import {
+  BranchInfo,
   ContentMap,
   ContentSchema,
   Document,
@@ -120,6 +121,56 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
 
       return docs;
     }, this);
+  }
+
+  public listFromTreePath(
+    treeName: string,
+    treePath: string[],
+  ): Outcome<(BranchInfo | DocumentInfo)[], PersistenceError> {
+    const dirPath = [this.workPaths.treesDir, treeName, ...treePath].join('/');
+    const result: (BranchInfo | DocumentInfo)[] = [];
+
+    return program(function* (): Program<(BranchInfo | DocumentInfo)[], PersistenceError> {
+      const entries: GitHubContentItem[] = yield this.githubClient
+        .getFolderContent(this.workPaths.dataBranch, dirPath)
+        .mapFailure(
+          (requestError) =>
+            new PersistenceError('Failed to fetch content from GitHub repo', requestError),
+        );
+
+      for (const entry of entries) {
+        if (entry.type === 'dir') {
+          const entryPath = dirPath + '/' + entry.name;
+          const variants: string[] = yield this.variantsFromFolder(entryPath);
+          const subEntries: GitHubContentItem[] = yield this.githubClient
+            .getFolderContent(this.workPaths.dataBranch, entryPath)
+            .mapFailure(
+              (requestError) =>
+                new PersistenceError('Failed to fetch content from GitHub repo', requestError),
+            );
+          const subDirs = subEntries.filter((entry) => entry.type === 'dir');
+
+          if (variants.length) {
+            result.push({
+              store: treeName,
+              path: treePath,
+              docId: entry.name,
+              variants,
+            });
+          }
+
+          if (subDirs.length) {
+            result.push({
+              store: treeName,
+              path: treePath,
+              branchId: entry.name,
+            });
+          }
+        }
+      }
+
+      return result;
+    }, this).mapFailure((err) => err.wrapIn(PersistenceError));
   }
 
   public getSingleton(
