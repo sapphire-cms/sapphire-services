@@ -20,6 +20,7 @@
     "github"
   ],
   "workspaces": [
+    "packages/cloudinary",
     "packages/github"
   ],
   "devDependencies": {

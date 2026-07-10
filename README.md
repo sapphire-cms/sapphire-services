@@ -12,6 +12,7 @@ Integrations of Sapphire CMS with 3rd-party online services.
 
 # Provided Integrations
 
+- [cloudinary](packages/cloudinary) - to manage media with Cloudinary.
 - [github](packages/github) - to persist documents and deliver content on GitHub.
 
 # License
