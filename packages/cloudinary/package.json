@@ -26,8 +26,8 @@
     "cloudinary": "^2.10.0"
   },
   "peerDependencies": {
-    "@sapphire-cms/core": "0.2.1",
-    "defectless": "1.0.0"
+    "@sapphire-cms/core": "^0.2.0",
+    "defectless": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1"
