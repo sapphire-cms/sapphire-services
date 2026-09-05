@@ -1,5 +1,11 @@
-import { Artifact, DeliveredArtifact, DeliveryError, DeliveryLayer } from '@sapphire-cms/core';
-import { Outcome } from 'defectless';
+import {
+  Artifact,
+  DeliveredArtifact,
+  DeliveryError,
+  DeliveryLayer,
+  Option,
+} from '@sapphire-cms/core';
+import { Outcome, success } from 'defectless';
 import { Base64 } from 'js-base64';
 import { ArtifactEntry, GithubClient } from './github-client';
 import { GithubModuleParams } from './github.module';
@@ -23,14 +29,22 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
     return this.githubClient
       .saveArtifacts(this.workPaths.outputBranch, entries, message)
       .map(() =>
-        artifacts.map((artifact, index) =>
-          Object.assign(
+        artifacts.map((artifact, index) => {
+          const entry = entries[index];
+
+          const url =
+            this.workPaths.outputBranch === 'gh-pages'
+              ? `https://${this.workPaths.owner}.github.io/${this.workPaths.repo}/${this.workPaths.outputDir}/${entry.contentFile}`
+              : `https://raw.githubusercontent.com/${this.workPaths.owner}/${this.workPaths.repo}/${this.workPaths.outputBranch}/${this.workPaths.outputDir}/${entry.contentFile}`;
+
+          return Object.assign(
             {
-              resourcePath: entries[index].contentFile!,
+              provider: 'github',
+              url,
             },
             artifact,
-          ),
-        ),
+          );
+        }),
       )
       .mapFailure(
         (requestError) =>
@@ -38,31 +52,13 @@ export default class GithubDeliveryLayer implements DeliveryLayer<GithubModulePa
       );
   }
 
-  private toCommitEntry(artifact: Artifact): ArtifactEntry {
-    let contentFile: string;
+  public getArtifactContent(_resourcePath: string): Outcome<Option<Uint8Array>, DeliveryError> {
+    // Not used, cause this delivery layer returns URLs
+    return success(Option.none());
+  }
 
-    switch (artifact.mime) {
-      case 'text/plain':
-        contentFile = `${artifact.slug}.txt`;
-        break;
-      case 'text/html':
-        contentFile = `${artifact.slug}.html`;
-        break;
-      case 'text/javascript':
-        contentFile = `${artifact.slug}.js`;
-        break;
-      case 'application/json':
-        contentFile = `${artifact.slug}.json`;
-        break;
-      case 'application/yaml':
-        contentFile = `${artifact.slug}.yaml`;
-        break;
-      case 'application/typescript':
-        contentFile = `${artifact.slug}.ts`;
-        break;
-      default:
-        contentFile = `${artifact.slug}.bin`;
-    }
+  private toCommitEntry(artifact: Artifact): ArtifactEntry {
+    const contentFile = `${artifact.slug}.${artifact.extension}`;
 
     const path = this.workPaths.outputDir + '/' + contentFile;
     const contentBase64 = Base64.fromUint8Array(artifact.content);

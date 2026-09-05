@@ -1,7 +1,6 @@
 import { RequestError } from '@octokit/request-error';
 import {
   BranchInfo,
-  ContentMap,
   ContentSchema,
   Document,
   DocumentInfo,
@@ -42,15 +41,6 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
   public prepareTreeRepo(_schema: ContentSchema): Outcome<void, PersistenceError> {
     // DO NOTHING
     return success();
-  }
-
-  public getContentMap(): Outcome<Option<ContentMap>, PersistenceError> {
-    return this.githubClient
-      .fetchJsonContent<ContentMap>(this.workPaths.dataBranch, this.workPaths.contentMapFile)
-      .mapFailure(
-        (requestError) =>
-          new PersistenceError('Failed to fetch content map from GitHub repo', requestError),
-      );
   }
 
   public listSingleton(documentId: string): Outcome<DocumentInfo[], PersistenceError> {
@@ -247,40 +237,6 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     return this.transactions.delete(transactionId)
       ? Outcome.success()
       : Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-  }
-
-  public updateContentMap(
-    contentMap: ContentMap,
-    transactionId?: string,
-  ): Outcome<void, PersistenceError> {
-    const content = JSON.stringify(contentMap);
-
-    if (transactionId) {
-      const transaction = this.transactions.get(transactionId);
-
-      if (!transaction) {
-        return Outcome.failure(new PersistenceError(`Transaction ${transactionId} was not found.`));
-      }
-
-      transaction.push({
-        path: this.workPaths.contentMapFile,
-        content,
-      });
-
-      return Outcome.success();
-    }
-
-    return this.githubClient
-      .saveContent(
-        this.workPaths.dataBranch,
-        this.workPaths.contentMapFile,
-        Base64.encode(content),
-        'Sapphire CMS: changing content map',
-      )
-      .mapFailure(
-        (requestError) =>
-          new PersistenceError('Failed to save content map into GitHub repo', requestError),
-      );
   }
 
   public putSingleton(
