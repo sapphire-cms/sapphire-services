@@ -1,4 +1,4 @@
-import { getBuildParamsType, SapphireModule } from '@sapphire-cms/core';
+import { getBuildParamsType, ParamDef, SapphireModule } from '@sapphire-cms/core';
 import CloudinaryMediaLayer from './cloudinary-media.layer';
 
 const moduleParamsDef = [
@@ -20,7 +20,7 @@ const moduleParamsDef = [
     required: true,
     description: 'Cloudinary API secret.',
   },
-] as const;
+] as const satisfies ParamDef[];
 
 const _params = getBuildParamsType(moduleParamsDef);
 export type CloudinaryModuleParams = typeof _params;

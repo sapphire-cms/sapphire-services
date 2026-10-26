@@ -1,4 +1,4 @@
-import { getBuildParamsType, SapphireModule } from '@sapphire-cms/core';
+import { getBuildParamsType, ParamDef, SapphireModule } from '@sapphire-cms/core';
 import GithubDeliveryLayer from './github-delivery.layer';
 import GithubPersistenceLayer from './github-persistence.layer';
 
@@ -48,7 +48,7 @@ const moduleParamsDef = [
     description:
       'Directory within the output branch for rendered artifacts. Defaults to the repository root.',
   },
-] as const;
+] as const satisfies ParamDef[];
 
 const _params = getBuildParamsType(moduleParamsDef);
 export type GithubModuleParams = typeof _params;
