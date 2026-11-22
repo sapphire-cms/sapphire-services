@@ -1,10 +1,10 @@
 import { RequestError } from '@octokit/request-error';
 import {
   BranchInfo,
-  ContentSchema,
   Document,
   DocumentInfo,
   DocumentReference,
+  HydratedContentSchema,
   Option,
   PersistenceError,
   PersistenceLayer,
@@ -28,17 +28,17 @@ export default class GithubPersistenceLayer implements PersistenceLayer<GithubMo
     this.githubClient = new GithubClient(this.workPaths);
   }
 
-  public prepareSingletonRepo(_schema: ContentSchema): Outcome<void, PersistenceError> {
+  public prepareSingletonRepo(_schema: HydratedContentSchema): Outcome<void, PersistenceError> {
     // DO NOTHING
     return success();
   }
 
-  public prepareCollectionRepo(_schema: ContentSchema): Outcome<void, PersistenceError> {
+  public prepareCollectionRepo(_schema: HydratedContentSchema): Outcome<void, PersistenceError> {
     // DO NOTHING
     return success();
   }
 
-  public prepareTreeRepo(_schema: ContentSchema): Outcome<void, PersistenceError> {
+  public prepareTreeRepo(_schema: HydratedContentSchema): Outcome<void, PersistenceError> {
     // DO NOTHING
     return success();
   }
