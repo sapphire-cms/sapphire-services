@@ -26,6 +26,7 @@ const config: rollup.RollupOptions[] = [
       'uuid',
       '@octokit/rest',
       '@octokit/request-error',
+      'mime-types',
     ],
   },
 ];

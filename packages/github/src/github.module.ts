@@ -1,5 +1,6 @@
 import { getBuildParamsType, ParamDef, SapphireModule } from '@sapphire-cms/core';
 import GithubDeliveryLayer from './github-delivery.layer';
+import GithubMediaLayer from './github-media.layer';
 import GithubPersistenceLayer from './github-persistence.layer';
 
 const moduleParamsDef = [
@@ -39,7 +40,8 @@ const moduleParamsDef = [
     name: 'outputBranch',
     type: 'string',
     required: false,
-    description: "Branch where Sapphire CMS pushes rendered artifacts. Defaults to 'gh-pages'.",
+    description:
+      "Branch where Sapphire CMS pushes rendered artifacts and media files. Defaults to 'gh-pages'.",
   },
   {
     name: 'outputDir',
@@ -47,6 +49,13 @@ const moduleParamsDef = [
     required: false,
     description:
       'Directory within the output branch for rendered artifacts. Defaults to the repository root.',
+  },
+  {
+    name: 'mediaDir',
+    type: 'string',
+    required: false,
+    description:
+      "Directory within the output branch for managed media files. Defaults to 'sapphire-cms-data/media'.",
   },
 ] as const satisfies ParamDef[];
 
@@ -59,6 +68,7 @@ export type GithubModuleParams = typeof _params;
   layers: {
     persistence: GithubPersistenceLayer,
     delivery: GithubDeliveryLayer,
+    media: GithubMediaLayer,
   },
 })
 export default class GithubModule {}

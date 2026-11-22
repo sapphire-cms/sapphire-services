@@ -57,12 +57,13 @@ render: '@codegen/typescript'
 
 ## Parameters
 
-| Parameter           | Type   | Mandatory | Description                                                                                     |
-| ------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------- |
-| owner               | string | yes       | GitHub username or organization that owns the target repository.                                |
-| repo                | string | yes       | Name of the GitHub repository.                                                                  |
-| personalAccessToken | string | yes       | GitHub personal access token with repo access permissions for reading and writing content.      |
-| dataBranch          | string | no        | Branch where Sapphire CMS stores managed documents. Defaults to `'master'`.                     |
-| dataDir             | string | no        | Directory within the data branch where documents are stored. Defaults to `'sapphire-cms-data'`. |
-| outputBranch        | string | no        | Branch where Sapphire CMS pushes rendered artifacts. Defaults to `'gh-pages'`.                  |
-| outputDir           | string | no        | Directory within the output branch for rendered artifacts. Defaults to the repository root.     |
+| Parameter             | Type   | Mandatory | Description                                                                                        |
+| --------------------- | ------ | --------- | -------------------------------------------------------------------------------------------------- |
+| owner                 | string | yes       | GitHub username or organization that owns the target repository.                                   |
+| repo                  | string | yes       | Name of the GitHub repository.                                                                     |
+| personal-access-token | string | yes       | GitHub personal access token with repo access permissions for reading and writing content.         |
+| data-branch           | string | no        | Branch where Sapphire CMS stores managed documents. Defaults to `'master'`.                        |
+| data-dir              | string | no        | Directory within the data branch where documents are stored. Defaults to `'sapphire-cms-data'`.    |
+| output-branch         | string | no        | Branch where Sapphire CMS pushes rendered artifacts and media files. Defaults to `'gh-pages'`.     |
+| output-dir            | string | no        | Directory within the output branch for rendered artifacts. Defaults to the repository root.        |
+| media-dir             | string | no        | Directory within the output branch for managed media files. Defaults to 'sapphire-cms-data/media'. |

@@ -15,6 +15,7 @@ export function resolveWorkPaths(params: GithubModuleParams): WorkPaths {
   const dataDir = params.dataDir || 'sapphire-cms-data';
   const outputBranch = params.outputBranch || 'gh-pages';
   const outputDir = params.outputDir || '';
+  const mediaDir = params.mediaDir || 'sapphire-cms-data/media';
 
   const schemasDir = dataDir + '/schemas';
   const pipelinesDir = dataDir + '/pipelines';
@@ -32,6 +33,7 @@ export function resolveWorkPaths(params: GithubModuleParams): WorkPaths {
     dataDir,
     outputBranch,
     outputDir,
+    mediaDir,
     schemasDir,
     pipelinesDir,
     documentsDir,

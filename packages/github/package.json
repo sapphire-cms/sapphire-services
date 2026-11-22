@@ -26,11 +26,15 @@
   "dependencies": {
     "@octokit/rest": "^22.0.0",
     "js-base64": "^3.7.7",
+    "mime-types": "^3.0.2",
     "uuid": "^14.0.0"
   },
   "peerDependencies": {
     "@sapphire-cms/core": "0.4.0",
     "defectless": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^3.0.1"
   },
   "scripts": {
     "build": "rollup -c",
