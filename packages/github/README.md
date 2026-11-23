@@ -20,10 +20,11 @@ scms pkg i github
 
 - `persistence`
 - `delivery`
+- `media`
 
 ## Examples
 
-### Persistence
+### Persistence / Media
 
 ```yaml
 # ./sapphire-cms.config.yaml
@@ -42,6 +43,7 @@ config:
 
 layers:
   persistence: '@github'
+  media: '@github'
 ```
 
 ### Delivery
